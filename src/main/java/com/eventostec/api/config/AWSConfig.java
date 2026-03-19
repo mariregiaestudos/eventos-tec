@@ -1,5 +1,8 @@
 package com.eventostec.api.config;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +17,9 @@ public class AWSConfig {
 
     @Bean
     public AmazonS3 createS3Instance(){
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+        return AmazonS3ClientBuilder
+                .standard()
+                .withCredentials(new DefaultAWSCredentialsProviderChain())
                 .withRegion(awsRegion)
                 .build();
     }

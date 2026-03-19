@@ -3,7 +3,9 @@ package com.eventostec.api.Services;
 import com.amazonaws.services.s3.AmazonS3;
 import com.eventostec.api.Domain.event.Event;
 import com.eventostec.api.Domain.event.EventRequestDTO;
+import com.eventostec.api.Repositories.EventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
@@ -15,6 +17,17 @@ import java.util.UUID;
 
 @Service
 public class EventService {
+
+    @Autowired
+    private AmazonS3 s3Client;
+
+    @Autowired
+    private EventRepository eventRepository;
+
+    public EventService(EventRepository eventRepository) {
+        this.eventRepository = eventRepository;
+    }
+
     public Event createEvent(EventRequestDTO data) {
         String imgUrl = null;
         if (data.image() != null){
@@ -27,7 +40,9 @@ public class EventService {
         event.setDate(new Date(data.date()));
         event.setEventUrl(data.eventUrl());
         event.setRemote(data.remote());
-        event.setImgUrl(imgUrl);
+        event.setImageUrl(imgUrl);
+
+        eventRepository.save(event);
 
         return event;
     }
@@ -36,15 +51,20 @@ public class EventService {
 //    private AmazonS3 s3Client(){
 //
 //    }
+    @Value("${aws.bucket.name}")
+    private String bucketName;
 
     private String uploadImage(MultipartFile image) {
-        String imgName = UUID.randomUUID() + "-" + image.getOriginalFilename();
+        String fileName = UUID.randomUUID() + "-" + image.getOriginalFilename();
         try{
             File file = this.convertMultipartToFile(image);
+            s3Client.putObject(bucketName, fileName, file);
+            file.delete();
+            return s3Client.getUrl(bucketName, fileName).toString();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            System.out.println("erro ao subir arquivo");
+            return "";
         }
-        return "";
     }
 
     private File convertMultipartToFile(MultipartFile file) throws IOException {
